@@ -1,5 +1,6 @@
 from django.db import models
 import pandas as pd
+import datetime
 
 
 class Task(models.Model):
@@ -31,12 +32,13 @@ class CelpeProject(models.Model):
     project_code = models.CharField(max_length=250, unique=True, blank=False, null=False,
                                     verbose_name='Código do projeto')
     is_priority = models.BooleanField(default=False, null=False, verbose_name='Prioritário')
-    city = models.CharField(max_length=500, null=False, blank=False, verbose_name='cidade')
     invoice_code = models.BigIntegerField(null=True, blank=True, verbose_name='Número da nota fiscal')
-    qtd_posts = models.IntegerField(default=0, null=False, blank=False, verbose_name='Quantidade de postes')
+    city = models.CharField(max_length=500, null=False, blank=False, verbose_name='cidade')
+    utd = models.CharField(max_length=500, null=True, blank=True, verbose_name='utd')
+    qtd_posts = models.IntegerField(default=0, null=True, blank=True, verbose_name='Quantidade de postes')
     km_dead_wire = models.FloatField(null=True, blank=True, default=0, verbose_name='Quilometragem de linha morta')
     km_live_wire = models.FloatField(null=True, blank=True, default=0, verbose_name='Quilometragem de linha viva')
-    start_date = models.DateTimeField(null=False, blank=False, verbose_name='Data de incio')
+    start_date = models.DateTimeField(null=True, blank=True, verbose_name='Data de incio')
     finish_date = models.DateTimeField(null=True, blank=True, verbose_name='Data de termino')
     deadline_date = models.DateTimeField(null=True, blank=True, verbose_name='Data prevista')
     instalation_number = models.BigIntegerField(null=True, blank=True, verbose_name='data de instalação')
@@ -61,5 +63,33 @@ class Carteira(models.Model):
 
     def save(self, force_insert=False, force_update=False, using=None, update_fields=None):
         super(Carteira, self).save()
-        data = pd.read_excel(self.file.path, sheet_name='CÓD. CS')
-        print(data.columns.ravel())
+        xlsx = pd.ExcelFile(self.file.path)
+        data = xlsx.parse(0)
+        projects_num = data.count()['Projeto']
+        # print("Número de projetos {}".format(projects_num))
+        for i in range(projects_num):
+            row = data.iloc[i, :]
+            project_code = row['Projeto']
+            is_priority = type(row['Prioridade']) is str
+            invoice_code = row['Nota']
+            main_scope = row['Escopo Principal']
+            secondary_scope = row['Escopo Secundario']
+            city = row['Local']
+            utd = row['UTD']
+            qtd_posts = row['Total de Postes']
+            km_dead_wire = row['KM AT']
+            km_dead_wire = row['KM BT']
+            start_date = row['Inicio Prev da Obra']
+            finish_date = row['Fim Prev da Obra']
+            deadline_date = row['PRAZO FINAL']
+            project, updated = CelpeProject.objects.update_or_create(project_code=project_code, is_priority=is_priority,
+                                                  invoice_code=invoice_code,
+                                                  city=city, utd=utd, qtd_posts=qtd_posts,
+                                                  km_dead_wire=km_dead_wire,
+                                                  km_live_wire=km_dead_wire, start_date=None,
+                                                  finish_date=None,
+                                                  deadline_date=None, instalation_number=None,
+                                                  invoice_generated=None,
+                                                  barrament_code=None, is_service_order=False)
+            if not updated:
+                print("Já existe")
