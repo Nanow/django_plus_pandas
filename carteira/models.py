@@ -27,6 +27,21 @@ class Task(models.Model):
         ordering = ['name']
 
 
+class Tasks(models.Model):
+    file = models.FileField()
+
+    def __str__(self):
+        return "atividades"
+
+    def save(self, force_insert=False, force_update=False, using=None, update_fields=None):
+        super(Tasks, self).save()
+        xlsx = pd.ExcelFile(self.file.path)
+        data = xlsx.parse(0)
+        print(data.head(0))
+        num_servico = data.count()['Número do serviço']
+        print(num_servico)
+
+
 class CelpeProject(models.Model):
     """ Projeto para a celpe """
     project_code = models.CharField(max_length=250, unique=True, blank=False, null=False,
@@ -45,6 +60,9 @@ class CelpeProject(models.Model):
     invoice_generated = models.BigIntegerField(null=True, blank=True, verbose_name='Nota fiscal gerada')
     barrament_code = models.BigIntegerField(null=True, blank=True, verbose_name='Número do barramento')
     is_service_order = models.BooleanField(default=False, null=False, blank=False, verbose_name='Ordem de Serviço')
+
+    def __str__(self):
+        return self.project_code
 
     class Meta:
         db_table = 'celpe_projects'
@@ -65,31 +83,38 @@ class Carteira(models.Model):
         super(Carteira, self).save()
         xlsx = pd.ExcelFile(self.file.path)
         data = xlsx.parse(0)
-        projects_num = data.count()['Projeto']
+        try:
+            print(data.head(0))
+            projects_num = data.count()['Projeto']
+
+        except Exception as ex:
+
+            print("Deu algo errado {}".format(type(ex)))
+        #
         # print("Número de projetos {}".format(projects_num))
-        for i in range(projects_num):
-            row = data.iloc[i, :]
-            project_code = row['Projeto']
-            is_priority = type(row['Prioridade']) is str
-            invoice_code = row['Nota']
-            main_scope = row['Escopo Principal']
-            secondary_scope = row['Escopo Secundario']
-            city = row['Local']
-            utd = row['UTD']
-            qtd_posts = row['Total de Postes']
-            km_dead_wire = row['KM AT']
-            km_dead_wire = row['KM BT']
-            start_date = row['Inicio Prev da Obra']
-            finish_date = row['Fim Prev da Obra']
-            deadline_date = row['PRAZO FINAL']
-            project, updated = CelpeProject.objects.update_or_create(project_code=project_code, is_priority=is_priority,
-                                                  invoice_code=invoice_code,
-                                                  city=city, utd=utd, qtd_posts=qtd_posts,
-                                                  km_dead_wire=km_dead_wire,
-                                                  km_live_wire=km_dead_wire, start_date=None,
-                                                  finish_date=None,
-                                                  deadline_date=None, instalation_number=None,
-                                                  invoice_generated=None,
-                                                  barrament_code=None, is_service_order=False)
-            if not updated:
-                print("Já existe")
+        # for i in range(projects_num):
+        #     row = data.iloc[i, :]
+        #     project_code = row['Projeto']
+        #     is_priority = type(row['Prioridade']) is str
+        #     invoice_code = row['Nota']
+        #     main_scope = row['Escopo Principal']
+        #     secondary_scope = row['Escopo Secundario']
+        #     city = row['Local']
+        #     utd = row['UTD']
+        #     qtd_posts = row['Total de Postes']
+        #     km_dead_wire = row['KM AT']
+        #     km_dead_wire = row['KM BT']
+        #     start_date = row['Inicio Prev da Obra']
+        #     finish_date = row['Fim Prev da Obra']
+        #     deadline_date = row['PRAZO FINAL']
+        #     project, updated = CelpeProject.objects.update_or_create(project_code=project_code, is_priority=is_priority,
+        #                                                              invoice_code=invoice_code,
+        #                                                              city=city, utd=utd, qtd_posts=qtd_posts,
+        #                                                              km_dead_wire=km_dead_wire,
+        #                                                              km_live_wire=km_dead_wire, start_date=None,
+        #                                                              finish_date=None,
+        #                                                              deadline_date=None, instalation_number=None,
+        #                                                              invoice_generated=None,
+        #                                                              barrament_code=None, is_service_order=False)
+        #     if not updated:
+        #         print("Já existe")
